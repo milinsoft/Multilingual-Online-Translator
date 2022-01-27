@@ -25,15 +25,12 @@ def assign_language(message: str, languages: tuple) -> str:
     return languages[number-1].lower()
 
 
-
 def main():
     supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebrew', 'Japanese', 'Dutch', 'Polish', 'Portuguese', 'Romanian', 'Russian', 'Turkish')
-
 
     print("Hello, you're welcome to the translator. Translator supports:\n")
     for n, language in enumerate(supported_languages, start=1):
         print(f"{n}. {language}")
-
 
     input_language = assign_language("Type the number of your language:\n", supported_languages)
     target_language = assign_language("Type the number of language you want to translate to:\n", supported_languages)
@@ -45,7 +42,6 @@ def main():
             headers=headers)
 
     if not page.status_code == 200:
-    # print("OK")
         return main()
 
     soup = BeautifulSoup(page.content, "html.parser")
