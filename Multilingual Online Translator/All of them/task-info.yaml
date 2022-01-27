@@ -136,5 +136,8 @@ files:
         TranslatorTest('translator.translator').run_tests()
   learner_created: false
 feedback_link: https://hyperskill.org/learn/step/8973#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Thu, 27 Jan 2022 17:24:59 UTC
 record: -1

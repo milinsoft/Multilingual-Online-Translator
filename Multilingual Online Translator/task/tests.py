@@ -16,39 +16,43 @@ CheckResult.correct = lambda: CheckResult(True, '')
 CheckResult.wrong = lambda feedback: CheckResult(False, feedback)
 
 
+languages = ["arabic", "german", "english", "spanish", "french",
+             "hebrew", "japanese", "dutch", "polish", "portuguese",
+             "romanian", "russian", "turkish"]
+
+
 class TranslatorTest(StageTest):
     def generate(self):
         return [
-            TestCase(stdin='fr\nhello\n', attach="fr\nhello"),
-            TestCase(stdin='fr\nbrotherhood\n', attach="fr\nbrotherhood"),
-            TestCase(stdin='fr\nengland\n', attach="fr\nengland"),
-            TestCase(stdin='en\nfromage\n', attach="en\nfromage"),
+            TestCase(stdin='3\n7\nwhat\n', attach='3\n7\nwhat'),
+            TestCase(stdin='12\n3\nничтожество\n', attach='12\n3\nничтожество'),
+            TestCase(stdin='5\n9\nrue\n', attach='5\n9\nrue'),
+            TestCase(stdin='4\n8\nnoches\n', attach='4\n8\nnoches'),
         ]
 
     def check(self, reply, attach):
-        language, word = attach.split("\n")
+        l1, l2, word = attach.split("\n")
+        l1, l2 = int(l1), int(l2)
+        second_language_name = languages[l2 - 1]
 
-        if '200 OK' not in reply:
-            return CheckResult.wrong("There isn't internet connection identifier.")
+        translations_title = "{0} translations".format(second_language_name).lower()
+        if translations_title not in reply.lower():
+            return CheckResult.wrong("Your program should output the phrase \"<Language> Translations\" "
+                                     "before printing the translations of the word.")
+        # the section with translations and examples
+        translations = reply[reply.lower().index(translations_title):].strip()
 
-        reply = reply[reply.index("200 OK"):]
-        if "translation" not in reply.lower():
-            return CheckResult.wrong("Your program should output the word \"Translations\" "
-                                     "before printing the translations of the word.\n"
-                                     "Also, this word should follow the internet connection identifier.")
-
-        translations = reply[reply.lower().index("translation"):].strip()
-
-        if "example" not in translations.lower():
+        examples_title = "{0} examples".format(second_language_name).lower()
+        if examples_title not in translations.lower():
             return CheckResult.wrong("Your program should output the phrase \"<Language> Examples\" "
                                      "before printing the examples of the translations.\n "
                                      "The examples should also follow the translations.")
-
-        examples_index = translations.lower().index("example")
+        # the beginning of the section with examples
+        examples_index = translations.lower().index(examples_title)
         examples = translations[examples_index:].strip().split("\n")
         examples = [line for line in examples if line and not line.lower().startswith('example')]
 
-        translations = translations[:examples_index].split("\n")[:-1]
+        translations = translations[:examples_index].split("\n")
         translations = [line for line in translations if line and not line.lower().startswith('translation')]
 
         if len(translations) == 0:
@@ -60,7 +64,7 @@ class TranslatorTest(StageTest):
                                      "Make sure that your context examples follow the translations \n"
                                      "and that each example is placed in a new line.")
 
-        true_translations, true_examples = get_results(language, word)
+        true_translations, true_examples = get_results(l1, l2, word)
         if true_translations == "Connection error":
             return CheckResult.wrong("Connection error occurred while connecting to the context.reverso.net\n"
                                      "Please, try again a bit later.")
@@ -91,20 +95,17 @@ class TranslatorTest(StageTest):
         return CheckResult.correct()
 
 
-def get_results(language, word):
-
-    if language == "en":
-        lang_to, lang_from = "english", "french"
-    else:
-        lang_to, lang_from = "french", "english"
-    url = f"https://context.reverso.net/translation/{lang_from}-{lang_to}/{word}"
+def get_results(l1, l2, word):
+    l1 = languages[l1 - 1]
+    l2 = languages[l2 - 1]
+    url = f"https://context.reverso.net/translation/{l1}-{l2}/{word}"
     user_agent = 'Mozilla/5.0'
     try:
         response = requests.get(url, timeout=10, headers={'User-Agent': user_agent})
     except requests.exceptions.ReadTimeout:
         return "Connection error", "Connection error"
     except requests.exceptions.ConnectionError:
-            return "Connection error", "Connection error"
+        return "Connection error", "Connection error"
 
     raw_contents = BeautifulSoup(response.content, 'html.parser')
     # translate words

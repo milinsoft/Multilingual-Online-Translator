@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-from http.client import responses
 
 headers = {'User-Agent': 'Safari/15.0'}
 
@@ -16,38 +15,47 @@ def get_examples(soup) -> list:
     return [element.text.strip() for element in span_tags]
 
 
+def assign_language(message: str, languages: tuple) -> str:
+    try:
+        number = int(input(message))
+        assert 1 < number < 13
+    except (ValueError, AssertionError):
+        print("PROVIDE THE NUMBER, NOTHING ELSE.")
+        return assign_language(message, languages)
+    return languages[number-1].lower()
+
+
+
 def main():
-    welcome_message = 'Type "en" if you want to translate from French into English, or "fr" if you want to translate from English into French:\n'
-    target_language = input(welcome_message).lower()
-    supported_languages = {"en": "english",
-                           "fr": "french"}
+    supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebrew', 'Japanese', 'Dutch', 'Polish', 'Portuguese', 'Romanian', 'Russian', 'Turkish')
 
-    if target_language not in supported_languages:
-        print("Incorrect option provided... starting over.")
-        return main()
 
-    else:
-        input_language = supported_languages['en'] if target_language == "fr" else supported_languages['fr']
-        word = input("Type the word you want to translate:\n")
+    print("Hello, you're welcome to the translator. Translator supports:\n")
+    for n, language in enumerate(supported_languages, start=1):
+        print(f"{n}. {language}")
 
-        confirmation_message = f'You chose "{supported_languages[target_language]}" as a language to translate "{word}".'
-        print(confirmation_message)
 
-        page = requests.get(
-            f"https://context.reverso.net/translation/{input_language}-{supported_languages[target_language]}/{word}",
+    input_language = assign_language("Type the number of your language:\n", supported_languages)
+    target_language = assign_language("Type the number of language you want to translate to:\n", supported_languages)
+
+    word = input("\nType the word you want to translate:\n").lower()
+
+    page = requests.get(
+            f"https://context.reverso.net/translation/{input_language}-{target_language}/{word}",
             headers=headers)
 
-        if not page.status_code == 200:
-            return main()
-        print(page.status_code, responses[page.status_code])
-        soup = BeautifulSoup(page.content, "html.parser")
-        translated_list, examples = \
-            get_translations(soup), get_examples(soup)
+    if not page.status_code == 200:
+    # print("OK")
+        return main()
 
-        print(f"\n{supported_languages[target_language].capitalize()} Translations:")
-        print(*translated_list, sep="\n")
-        print(f"\n{supported_languages[target_language].capitalize()} Examples:")
-        print(*examples, sep='\n')
+    soup = BeautifulSoup(page.content, "html.parser")
+    translated_list, examples = \
+        get_translations(soup), get_examples(soup)
+
+    print(f"\n{target_language} Translations:")
+    print(*translated_list, sep="\n")
+    print(f"\n{target_language} Examples:")
+    print(*examples, sep='\n')
 
 
 if __name__ == "__main__":
