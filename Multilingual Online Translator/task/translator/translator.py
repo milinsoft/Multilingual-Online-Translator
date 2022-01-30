@@ -1,10 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
+from os.path import exists
 
 headers = {'User-Agent': 'Safari/15.0'}
 
 
-def assign_language(mode: str, languages: tuple) -> str:
+def assign_language(mode: str,) -> str:
     message = {"in": "Type the number of your language:\n",
                "out": "Type the number of language you want to translate to or '0' to translate to all languages:\n",
                }[mode]
@@ -14,8 +15,8 @@ def assign_language(mode: str, languages: tuple) -> str:
         assert 1 <= number <= 13 if mode == "in" else 0 <= number <= 13
     except (ValueError, AssertionError):
         print("PROVIDE THE NUMBER, NOTHING ELSE.")
-        return assign_language(mode, languages)
-    return languages[number - 1].lower() if number != 0 else "all"
+        return assign_language(mode)
+    return supported_languages[number - 1].lower() if number != 0 else "all"
 
 
 def translate_to_file(_input_language, _out_language, _word):
@@ -52,6 +53,7 @@ def translate_to_file(_input_language, _out_language, _word):
             print(f"\n{_out_language.capitalize()} Examples:", file=file)
             print(*examples, sep='\n', file=file)
 
+
 supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebrew', 'Japanese',
                        'Dutch', 'Polish', 'Portuguese', 'Romanian', 'Russian', 'Turkish')
 
@@ -61,16 +63,18 @@ def main():
     for n, language in enumerate(supported_languages, start=1):
         print(f"{n}. {language}")
 
-    input_language = assign_language("in", supported_languages)
-    output_language = assign_language("out", supported_languages)
+    input_language, output_language = \
+        assign_language("in"), assign_language("out")
+
 
     word = input("\nType the word you want to translate:\n").lower()
 
-    if output_language != "all":
-        translate_to_file(input_language, output_language, word)
-    else:
-        for out_language in supported_languages:
-            translate_to_file(input_language, out_language, word)
+    if not exists(f"{word}.txt"):
+        if output_language != "all":
+            translate_to_file(input_language, output_language, word)
+        else:
+            for out_language in supported_languages:
+                translate_to_file(input_language, out_language, word)
 
     with open(f"{word}.txt", 'r') as translations:
         print(translations.read())
