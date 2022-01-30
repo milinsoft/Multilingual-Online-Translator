@@ -1,22 +1,9 @@
+import sys
 import requests
 from bs4 import BeautifulSoup
 from os.path import exists
 
 headers = {'User-Agent': 'Safari/15.0'}
-
-
-def assign_language(mode: str, ) -> str:
-    message = {"in": "Type the number of your language:\n",
-               "out": "Type the number of language you want to translate to or '0' to translate to all languages:\n",
-               }[mode]
-
-    try:
-        number = int(input(message))
-        assert 1 <= number <= 13 if mode == "in" else 0 <= number <= 13
-    except (ValueError, AssertionError):
-        print("PROVIDE THE NUMBER, NOTHING ELSE.")
-        return assign_language(mode)
-    return supported_languages[number - 1].lower() if number != 0 else "all"
 
 
 def translate_to_file(_input_language, _out_language, _word):
@@ -59,14 +46,11 @@ supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebr
 
 
 def main():
-    print("Hello, you're welcome to the translator. Translator supports:\n")
-    for n, language in enumerate(supported_languages, start=1):
-        print(f"{n}. {language}")
+    if len(sys.argv) != 4:
+        exit(print("Fatal error. 4 arguments required."))
 
-    input_language, output_language = \
-        assign_language("in"), assign_language("out")
-
-    word = input("\nType the word you want to translate:\n").lower()
+    input_language, output_language, word =\
+        sys.argv[1], sys.argv[2], sys.argv[3].lower()
 
     if not exists(f"{word}.txt"):
         if output_language != "all":

@@ -26,9 +26,8 @@ languages = ["arabic", "german", "english", "spanish", "french",
 class TranslatorTest(StageTest):
     def generate(self):
         return [
-            TestCase(stdin='3\n0\nwhat\n', attach='3\n0\nwhat'),
-            TestCase(stdin='5\n0\nmiracles\n', attach='5\n0\nmiracles'),
-            TestCase(stdin='12\n3\nглаза\n', attach='12\n3\nглаза')
+            TestCase(args=['english', 'all', 'love'], attach='english\nall\nlove'),
+            TestCase(args=['spanish', 'english', 'derechos'], attach='spanish\nenglish\nderechos')
         ]
 
     def check_output(self, output, true_results):
@@ -91,7 +90,6 @@ class TranslatorTest(StageTest):
 
     def check(self, reply, attach):
         l1, l2, word = attach.split("\n")
-        l1, l2 = int(l1), int(l2)
         result_dict = get_results(l1, l2, word)
 
         file_name = word + '.txt'
@@ -114,7 +112,7 @@ class TranslatorTest(StageTest):
         is_correct, feedback = self.check_output(output, result_dict)
         if not is_correct:
             if "Connection error" not in feedback:
-                feedback = f'A problem occurred while reading the file "{file_name}".\n' + feedback
+                feedback = 'A problem occurred while reading the file that you created.\n' + feedback
             return CheckResult.wrong(feedback)
 
         try:
@@ -127,12 +125,10 @@ class TranslatorTest(StageTest):
 
 
 def get_results(l1, l2, word):
-    l1 -= 1
-    if l2 == 0:
-        target_languages = languages[:l1] + languages[l1 + 1:]
+    if l2 == 'all':
+        target_languages = [language for language in languages if language != l1]
     else:
-        target_languages = [languages[l2 - 1]]
-    l1 = languages[l1]
+        target_languages = [l2]
 
     result_dict = {}
 
