@@ -5,10 +5,12 @@ import requests
 from itertools import chain
 from bs4 import BeautifulSoup
 import sys
+import os
 
 
 if sys.platform.startswith("win"):
     import _locale
+
     # pylint: disable=protected-access
     _locale._getdefaultlocale = (lambda *args: ['en_US', 'utf8'])
 
@@ -24,101 +26,138 @@ languages = ["arabic", "german", "english", "spanish", "french",
 class TranslatorTest(StageTest):
     def generate(self):
         return [
-            TestCase(stdin='3\n7\nwhat\n', attach='3\n7\nwhat'),
-            TestCase(stdin='12\n3\nничтожество\n', attach='12\n3\nничтожество'),
-            TestCase(stdin='5\n9\nrue\n', attach='5\n9\nrue'),
-            TestCase(stdin='4\n8\nnoches\n', attach='4\n8\nnoches'),
+            TestCase(stdin='3\n0\nwhat\n', attach='3\n0\nwhat'),
+            TestCase(stdin='5\n0\nmiracles\n', attach='5\n0\nmiracles'),
+            TestCase(stdin='12\n3\nглаза\n', attach='12\n3\nглаза')
         ]
+
+    def check_output(self, output, true_results):
+        output = output.lower()
+
+        for language in true_results:
+            translations_title = '{} translation'.format(language).lower()
+            if translations_title not in output:
+                return False, 'The title \"{0} translation\" was not found.'.format(language)
+            examples_title = "{0} example".format(language).lower()
+            translations = output[output.index(translations_title):].strip()
+
+            if examples_title not in translations.lower():
+                return False, 'The title \"{0}\" was not found.\n' \
+                              'Make sure you output this title before example sentences for this language,\n' \
+                              'and that you output it after translations for it.'.format(examples_title)
+
+            # the beginning of the section with context examples
+            examples_index = translations.index(examples_title)
+            try:
+                # the end of the section with context examples
+                examples_end = translations.index('translation', examples_index)
+            except ValueError:
+                # if the language is last in the list, the end of the context examples is the end of the output
+                examples_end = None
+            examples = translations[examples_index:examples_end].split('\n')
+            translations = translations[:examples_index].strip().split('\n')
+            examples = [line for line in examples if line and examples_title not in line]
+            translations = [line for line in translations if line and translations_title not in line]
+
+            if len(translations) == 0:
+                return False, "No translations for {0} are found.\n" \
+                              "Make sure that each translated word is placed in a new line\n" \
+                              "and that translations precede examples.".format(language)
+
+            if len(examples) == 0:
+                return False, "No context examples for {0} are found.\n" \
+                              "Make sure that your context examples follow the translations\n" \
+                              "and that each example is placed in a new line.".format(language)
+
+            true_translations, true_examples = true_results[language]
+            if true_translations == "Connection error":
+                return CheckResult.wrong("Connection error occurred while connecting to the context.reverso.net\n"
+                                         "Please, try again a bit later.")
+
+            translations_intersection = [True for user_translation in translations
+                                         if user_translation in true_translations]
+            if not translations_intersection:
+                return False, "No correct translations for {0} are found.\n" \
+                              "Please, output the first found translation " \
+                              "of the given word for this language if you output one translation.".format(language)
+
+            examples_intersection = [True for user_example in examples if user_example in true_examples]
+            if not examples_intersection:
+                return False, "No correct examples for {0} are found.\n" \
+                              "If you output only one example for each language,\n" \
+                              "please, use the first example that you find on the web page.".format(language)
+
+        return True, ''
 
     def check(self, reply, attach):
         l1, l2, word = attach.split("\n")
         l1, l2 = int(l1), int(l2)
-        second_language_name = languages[l2 - 1]
+        result_dict = get_results(l1, l2, word)
 
-        translations_title = "{0} translations".format(second_language_name).lower()
-        if translations_title not in reply.lower():
-            return CheckResult.wrong("Your program should output the phrase \"<Language> Translations\" "
-                                     "before printing the translations of the word.")
-        # the section with translations and examples
-        translations = reply[reply.lower().index(translations_title):].strip()
+        file_name = word + '.txt'
+        if not os.path.exists(file_name):
+            return CheckResult.wrong("Looks like you didn't create a file named <word>.txt \n"
+                                     "where <word> is the word that should be translated.")
 
-        examples_title = "{0} examples".format(second_language_name).lower()
-        if examples_title not in translations.lower():
-            return CheckResult.wrong("Your program should output the phrase \"<Language> Examples\" "
-                                     "before printing the examples of the translations.\n "
-                                     "The examples should also follow the translations.")
-        # the beginning of the section with examples
-        examples_index = translations.lower().index(examples_title)
-        examples = translations[examples_index:].strip().split("\n")
-        examples = [line for line in examples if line and not line.lower().startswith('example')]
+        with open(file_name, 'r', encoding='utf-8') as fh:
+            try:
+                output = fh.read()
+            except UnicodeDecodeError:
+                return CheckResult.wrong("UnicodeDecodeError occurred while reading your file. \n"
+                                         "Perhaps you used the wrong encoding? Please, use utf-8 encoding.")
 
-        translations = translations[:examples_index].split("\n")
-        translations = [line for line in translations if line and not line.lower().startswith('translation')]
+        if output.lower().strip() not in reply.lower().strip():
+            return CheckResult.wrong("The output to the terminal does not seem to contain the content of the file.\n"
+                                     "Please make sure that you output the results to the terminal as well.\n"
+                                     "Also, make sure that the output to the terminal contains all the data written to the file unmodified.")
 
-        if len(translations) == 0:
-            return CheckResult.wrong("No translations are found. \n"
-                                     "Make sure that each translated word is placed in a new line.")
+        is_correct, feedback = self.check_output(output, result_dict)
+        if not is_correct:
+            if "Connection error" not in feedback:
+                feedback = f'A problem occurred while reading the file "{file_name}".\n' + feedback
+            return CheckResult.wrong(feedback)
 
-        if len(examples) == 0:
-            return CheckResult.wrong("No context examples are found. \n"
-                                     "Make sure that your context examples follow the translations \n"
-                                     "and that each example is placed in a new line.")
-
-        true_translations, true_examples = get_results(l1, l2, word)
-        if true_translations == "Connection error":
-            return CheckResult.wrong("Connection error occurred while connecting to the context.reverso.net\n"
-                                     "Please, try again a bit later.")
-
-        translations_intersection = [True for user_translation in translations
-                                     if user_translation.lower() in true_translations]
-
-        if not translations_intersection:
-            return CheckResult.wrong("No correct translations are found.\n"
-                                     "Make sure that you place every word in a new line \n"
-                                     "and get rid of lists' commas, quotation marks and square brackets.")
-
-        examples_intersection = [True for user_example in examples if user_example.lower() in true_examples]
-
-        if not examples_intersection:
-            return CheckResult.wrong("No correct examples are found.\n"
-                                     "Make sure that you place every example in a new line \n"
-                                     "and get rid of lists' commas, quotation marks and square brackets.")
-
-        if len(true_examples) >= 10 and len(examples_intersection) < 10 or \
-                len(true_examples) < 10 and len(true_examples) != len(examples_intersection):
-            return CheckResult.wrong("Please, output at least 5 examples for the given word\n"
-                                     "(that is, 10 sentences, one for each of two languages). \n"
-                                     "If there are less than 5 examples, output them all.\n"
-                                     "Make sure that you place every sentence in a new line \n"
-                                     "and get rid of lists' commas, quotation marks and square brackets.")
+        try:
+            os.remove(file_name)
+        except:
+            return CheckResult.wrong("An error occurred while your file was being removed.\n"
+                                     "Please make sure that you close all the files after writing the results in them.")
 
         return CheckResult.correct()
 
 
 def get_results(l1, l2, word):
-    l1 = languages[l1 - 1]
-    l2 = languages[l2 - 1]
-    url = f"https://context.reverso.net/translation/{l1}-{l2}/{word}"
-    user_agent = 'Mozilla/5.0'
-    try:
-        response = requests.get(url, timeout=10, headers={'User-Agent': user_agent})
-    except requests.exceptions.ReadTimeout:
-        return "Connection error", "Connection error"
-    except requests.exceptions.ConnectionError:
-        return "Connection error", "Connection error"
+    l1 -= 1
+    if l2 == 0:
+        target_languages = languages[:l1] + languages[l1 + 1:]
+    else:
+        target_languages = [languages[l2 - 1]]
+    l1 = languages[l1]
 
-    raw_contents = BeautifulSoup(response.content, 'html.parser')
-    # translate words
-    translations = raw_contents.find_all('a', {"class": 'translation'})
-    # example sentences
-    sentences_src, sentences_target = \
-        raw_contents.find_all('div', {"class": "src ltr"}), raw_contents.find_all('div', {"class": ["trg ltr", "trg rtl arabic", "trg rtl"]})
+    result_dict = {}
 
-    translation_list = [translation.get_text().strip().lower() for translation in translations]
-    sentence_list = [sentence.get_text().strip().lower() for sentence in
-                     list(chain(*[sentence_pair for sentence_pair in zip(sentences_src, sentences_target)]))]
+    for lang_to in target_languages:
+        url = f"https://context.reverso.net/translation/{l1}-{lang_to}/{word}"
+        user_agent = 'Mozilla/5.0'
+        try:
+            response = requests.get(url, timeout=10, headers={'User-Agent': user_agent})
+        except requests.exceptions.ReadTimeout:
+            return "Connection error", "Connection error"
+        except requests.exceptions.ConnectionError:
+            return "Connection error", "Connection error"
 
-    return set(translation_list), set(sentence_list)
+        raw_contents = BeautifulSoup(response.content, 'html.parser')
+        translations = raw_contents.find_all('a', {"class": 'translation'})
+        sentences_src, sentences_target = \
+            raw_contents.find_all('div', {"class": "src ltr"}), \
+            raw_contents.find_all('div', {"class": ["trg ltr", "trg rtl arabic", "trg rtl"]})
+
+        translation_list = [translation.get_text().strip().lower() for translation in translations]
+        sentence_list = [sentence.get_text().strip().lower() for sentence in
+                         list(chain(*[sentence_pair for sentence_pair in zip(sentences_src, sentences_target)]))]
+        result_dict[lang_to] = [set(translation_list), set(sentence_list)]
+
+    return result_dict
 
 
 if __name__ == '__main__':
