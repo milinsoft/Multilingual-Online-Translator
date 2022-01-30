@@ -5,7 +5,7 @@ from os.path import exists
 headers = {'User-Agent': 'Safari/15.0'}
 
 
-def assign_language(mode: str,) -> str:
+def assign_language(mode: str, ) -> str:
     message = {"in": "Type the number of your language:\n",
                "out": "Type the number of language you want to translate to or '0' to translate to all languages:\n",
                }[mode]
@@ -39,7 +39,7 @@ def translate_to_file(_input_language, _out_language, _word):
         f"https://context.reverso.net/translation/{_input_language}-{_out_language.lower()}/{_word}",
         headers=headers)
 
-    if not page.status_code == 200:
+    if page.status_code != 200:
         return main()
 
     soup = BeautifulSoup(page.content, "html.parser")
@@ -48,7 +48,7 @@ def translate_to_file(_input_language, _out_language, _word):
 
     if translated_list:
         with open(f"{_word}.txt", 'a+') as file:
-            print(f"\n{_out_language.capitalize()} Translations:", file=file)
+            print(f"\n{_out_language.capitalize()} Translation:", file=file)
             print(*translated_list, sep="\n", file=file)
             print(f"\n{_out_language.capitalize()} Examples:", file=file)
             print(*examples, sep='\n', file=file)
@@ -65,7 +65,6 @@ def main():
 
     input_language, output_language = \
         assign_language("in"), assign_language("out")
-
 
     word = input("\nType the word you want to translate:\n").lower()
 
