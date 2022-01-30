@@ -170,9 +170,6 @@ files:
     if __name__ == '__main__':
         TranslatorTest('translator.translator').run_tests()
   learner_created: false
-- name: love.txt
-  visible: true
-  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/8975#comment
 status: Solved
 feedback:

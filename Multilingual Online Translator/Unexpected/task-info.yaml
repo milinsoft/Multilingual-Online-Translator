@@ -182,6 +182,13 @@ files:
     if __name__ == '__main__':
         TranslatorTest('translator.translator').run_tests()
   learner_created: false
+- name: chute.txt
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/8976#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Well done! You've finished the project. Select a new project on <a href="https://hyperskill.org/projects">JetBrains
+    Academy</a> to continue learning.
+  time: Sun, 30 Jan 2022 14:39:05 UTC
 record: -1
