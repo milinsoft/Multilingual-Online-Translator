@@ -1,5 +1,3 @@
-import sys
-
 import requests
 from bs4 import BeautifulSoup
 
@@ -37,18 +35,12 @@ def assign_language(mode: str, languages: tuple) -> str:
     return languages[number - 1].lower() if number != 0 else "all"
 
 
-def save_translations(wrd, ):
-    ...
-
-
-
-
 def main():
 
-    def translate(target_language):
+    def translate(out_language):
         page = requests.get(
-        f"https://context.reverso.net/translation/{input_language}-{target_language.lower()}/{word}",
-        headers=headers)
+            f"https://context.reverso.net/translation/{input_language}-{out_language.lower()}/{word}",
+            headers=headers)
 
         if not page.status_code == 200:
             return main()
@@ -57,21 +49,12 @@ def main():
         translated_list, examples = \
             get_translations(soup), get_examples(soup)
 
-
-
         if translated_list:
             with open(f"{word}.txt", 'a+') as file:
-                print(f"\n{target_language} Translations:")
-                print(*translated_list, sep="\n")
-                print(f"\n{target_language} Examples:")
-                print(*examples, sep='\n')
-
-
-                print(f"\n{target_language} Translations:", file=file)
+                print(f"\n{out_language} Translations:", file=file)
                 print(*translated_list, sep="\n", file=file)
-                print(f"\n{target_language} Examples:", file=file)
+                print(f"\n{out_language} Examples:", file=file)
                 print(*examples, sep='\n', file=file)
-
 
     supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebrew', 'Japanese',
                            'Dutch', 'Polish', 'Portuguese', 'Romanian', 'Russian', 'Turkish')
@@ -81,20 +64,18 @@ def main():
         print(f"{n}. {language}")
 
     input_language = assign_language("in", supported_languages)
-    target_language = assign_language("out", supported_languages)
+    output_language = assign_language("out", supported_languages)
 
     word = input("\nType the word you want to translate:\n").lower()
 
-    if target_language != "all":
-        return translate(target_language)
+    if output_language != "all":
+        translate(output_language)
     else:
         for language in supported_languages:
             translate(language)
-            #print(language)
 
-
-
-
+    with open(f"{word}.txt", 'r') as translations:
+        print(translations.read())
 
 
 if __name__ == "__main__":
