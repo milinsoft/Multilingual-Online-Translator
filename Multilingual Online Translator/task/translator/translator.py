@@ -18,7 +18,7 @@ def assign_language(mode: str, languages: tuple) -> str:
     return languages[number - 1].lower() if number != 0 else "all"
 
 
-def translate(_input_language, _out_language, _word):
+def translate_to_file(_input_language, _out_language, _word):
     def get_translations() -> list:
         tag_attributes = {"id": "translations-content", "class": "wide-container"}
         try:
@@ -47,11 +47,10 @@ def translate(_input_language, _out_language, _word):
 
     if translated_list:
         with open(f"{_word}.txt", 'a+') as file:
-            print(f"\n{_out_language} Translations:", file=file)
+            print(f"\n{_out_language.capitalize()} Translations:", file=file)
             print(*translated_list, sep="\n", file=file)
-            print(f"\n{_out_language} Examples:", file=file)
+            print(f"\n{_out_language.capitalize()} Examples:", file=file)
             print(*examples, sep='\n', file=file)
-
 
 supported_languages = ('Arabic', 'German', 'English', 'Spanish', 'French', 'Hebrew', 'Japanese',
                        'Dutch', 'Polish', 'Portuguese', 'Romanian', 'Russian', 'Turkish')
@@ -68,10 +67,10 @@ def main():
     word = input("\nType the word you want to translate:\n").lower()
 
     if output_language != "all":
-        translate(input_language, output_language, word)
+        translate_to_file(input_language, output_language, word)
     else:
         for out_language in supported_languages:
-            translate(input_language, out_language, word)
+            translate_to_file(input_language, out_language, word)
 
     with open(f"{word}.txt", 'r') as translations:
         print(translations.read())
